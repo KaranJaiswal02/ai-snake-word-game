@@ -2,12 +2,18 @@ import pygame
 import random
 import string
 import heapq
+import nltk
+from nltk.corpus import words
+
+# Download words dataset if not available
+nltk.download('words')
+valid_words = set(words.words())
 
 # Initialize Pygame
 pygame.init()
 
 # Game Constants
-WIDTH, HEIGHT = 1200, 700
+WIDTH, HEIGHT = 1300, 750
 GRID_SIZE = 20
 FPS = 10
 FONT = pygame.font.Font(None, 24)
@@ -46,6 +52,10 @@ def spawn_letter():
 letters = [spawn_letter() for _ in range(3)]  # Start with 3 letters
 collected_letters = ""
 ai_collected_letters = ""
+
+# Word Validation Function
+def is_valid_word(word):
+    return len(word) > 2 and word.lower() in valid_words  # Ensure minimum 3 letters
 
 # A* Pathfinding for AI
 def heuristic(a, b):
@@ -119,6 +129,9 @@ while running:
                 collected_letters += letter[2]
                 letters.remove(letter)
                 letters.append(spawn_letter())
+                if is_valid_word(collected_letters):
+                    print(f"Valid Word Formed: {collected_letters}")
+                    collected_letters = ""  # Reset only for valid words
                 break
         else:
             snake.pop()
@@ -137,14 +150,11 @@ while running:
                     ai_collected_letters += target_letter[2]
                     letters.remove(target_letter)
                     letters.append(spawn_letter())
+                    if is_valid_word(ai_collected_letters):
+                        print(f"AI Formed Valid Word: {ai_collected_letters}")
+                        ai_collected_letters = ""
                 else:
                     ai_snake.pop()
-        else:
-            random_moves = [(ai_snake[0][0] + dx, ai_snake[0][1] + dy) for dx, dy in [(0, -GRID_SIZE), (0, GRID_SIZE), (-GRID_SIZE, 0), (GRID_SIZE, 0)]]
-            valid_moves = [move for move in random_moves if not check_collision(ai_snake[1:], move)]
-            if valid_moves:
-                ai_snake.insert(0, random.choice(valid_moves))
-                ai_snake.pop()
     
     # Draw Player Snake
     for segment in snake:
