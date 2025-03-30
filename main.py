@@ -13,7 +13,7 @@ valid_words = set(words.words())
 pygame.init()
 
 # Game Constants
-WIDTH, HEIGHT = 1200, 750
+WIDTH, HEIGHT = 1200, 800
 GRID_SIZE = 20
 FPS = 10
 FONT = pygame.font.Font(None, 24)
@@ -58,8 +58,17 @@ collected_letters = ""
 ai_collected_letters = ""
 
 # Word Validation Function
+# def is_valid_word(word):
+#     return len(word) > 1 and word.lower() in valid_words  # Ensures single letters are not counted
+
+# Define a set of common two-letter words manually
+common_two_letter_words = {"as", "at", "be", "by", "do", "go", "he", "if", "in", "is", "it", 
+                           "me", "my", "no", "of", "on", "or", "so", "to", "up", "us", "we"}
+
 def is_valid_word(word):
-    return len(word) > 1 and word.lower() in valid_words  # Ensures single letters are not counted
+    word = word.lower()
+    return (len(word) > 2 and word in valid_words) or (len(word) == 2 and word in common_two_letter_words)
+
 
 # A* Pathfinding for AI
 def heuristic(a, b):
