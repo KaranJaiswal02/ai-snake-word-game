@@ -13,7 +13,7 @@ valid_words = set(words.words())
 pygame.init()
 
 # Game Constants
-WIDTH, HEIGHT = 1300, 750
+WIDTH, HEIGHT = 1200, 750
 GRID_SIZE = 20
 FPS = 10
 FONT = pygame.font.Font(None, 24)
@@ -42,6 +42,7 @@ snake = [safe_spawn([])]  # Player snake
 ai_snake = [safe_spawn(snake)]  # AI snake ensures it doesn't overlap
 direction = (GRID_SIZE, 0)
 ai_direction = (GRID_SIZE, 0)
+ai_frozen = 0  # AI freeze timer
 
 # Letter Spawning Function
 def spawn_letter():
@@ -55,7 +56,7 @@ ai_collected_letters = ""
 
 # Word Validation Function
 def is_valid_word(word):
-    return len(word) > 2 and word.lower() in valid_words  # Ensure minimum 3 letters
+    return len(word) > 1 and word.lower() in valid_words  # Ensures single letters are not counted
 
 # A* Pathfinding for AI
 def heuristic(a, b):
@@ -124,6 +125,8 @@ while running:
         running = False
     else:
         snake.insert(0, new_head)
+        if new_head not in [(letter[0], letter[1]) for letter in letters]:
+            snake.pop()
         for letter in letters:
             if (letter[0], letter[1]) == new_head:
                 collected_letters += letter[2]
@@ -131,47 +134,45 @@ while running:
                 letters.append(spawn_letter())
                 if is_valid_word(collected_letters):
                     print(f"Valid Word Formed: {collected_letters}")
-                    collected_letters = ""  # Reset only for valid words
+                    collected_letters = ""
+                    ai_frozen = 50  # AI freezes for 5 seconds
+                    
                 break
-        else:
-            snake.pop()
     
     # AI Movement
-    if letters:
+    if ai_frozen > 0:
+        ai_frozen -= 1
+    elif letters:
         target_letter = get_closest_letter(ai_snake[0])
         path = astar_path(ai_snake[0], (target_letter[0], target_letter[1]))
         if path:
             next_move = path[0]
-            if check_collision(ai_snake[1:], next_move):
-                running = False
+            ai_snake.insert(0, next_move)
+            if ai_snake[0] == (target_letter[0], target_letter[1]):
+                ai_collected_letters += target_letter[2]
+                letters.remove(target_letter)
+                letters.append(spawn_letter())
+                
+                if is_valid_word(ai_collected_letters):
+                    print(f"AI Formed Valid Word: {ai_collected_letters}")
+                    ai_collected_letters = ""
             else:
-                ai_snake.insert(0, next_move)
-                if ai_snake[0] == (target_letter[0], target_letter[1]):
-                    ai_collected_letters += target_letter[2]
-                    letters.remove(target_letter)
-                    letters.append(spawn_letter())
-                    if is_valid_word(ai_collected_letters):
-                        print(f"AI Formed Valid Word: {ai_collected_letters}")
-                        ai_collected_letters = ""
-                else:
-                    ai_snake.pop()
+                ai_snake.pop()
     
-    # Draw Player Snake
+    # Draw Snakes and Letters
     for segment in snake:
         pygame.draw.rect(screen, GREEN, (segment[0], segment[1], GRID_SIZE, GRID_SIZE))
-    
-    # Draw AI Snake
     for segment in ai_snake:
         pygame.draw.rect(screen, BLUE, (segment[0], segment[1], GRID_SIZE, GRID_SIZE))
-    
-    # Draw Letters
     for letter in letters:
         pygame.draw.rect(screen, RED, (letter[0], letter[1], GRID_SIZE, GRID_SIZE))
         screen.blit(FONT.render(letter[2], True, WHITE), (letter[0] + 5, letter[1] + 5))
-    
-    # Display Collected Letters
-    text_surface = FONT.render(f"Player: {collected_letters} | AI: {ai_collected_letters}", True, BLACK)
-    screen.blit(text_surface, (10, 10))
+
+    player_text = FONT.render(f"Player: {collected_letters}", True, BLACK)
+    ai_text = FONT.render(f"AI: {ai_collected_letters}", True, BLACK)
+    screen.blit(player_text, (10, 10))
+    screen.blit(ai_text, (10, 30))
+
     
     pygame.display.flip()
     pygame.time.Clock().tick(FPS)
