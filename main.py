@@ -102,6 +102,27 @@ def check_collision(snake_body, new_head):
             new_head[0] < 0 or new_head[0] >= WIDTH or 
             new_head[1] < 0 or new_head[1] >= HEIGHT)
 
+def check_valid_word():
+    global collected_letters, ai_frozen, letters
+    for i in range(len(collected_letters)):
+        word_to_check = collected_letters[i:]  # Check from right to left
+        if is_valid_word(word_to_check):
+            print(f"Valid Word Formed: {word_to_check}")
+            collected_letters = ""  # Reset collected letters
+            ai_frozen = 100  # AI freezes
+            letters.extend(spawn_letter() for _ in range(5))  # Spawn exactly 5 extra letters
+            break  # Stop checking after the first valid word
+
+def check_valid_word_ai():
+    global ai_collected_letters, letters
+    for i in range(len(ai_collected_letters)):
+        word_to_check = ai_collected_letters[i:]  # Check from right to left
+        if is_valid_word(word_to_check):
+            print(f"AI Formed Valid Word: {word_to_check}")
+            ai_collected_letters = ""  # Reset AI's collected letters
+            # letters.extend(spawn_letter() for _ in range(5))  # Spawn exactly 5 extra letters
+            break  # Stop checking after the first valid word
+
 # Game Loop
 running = True
 while running:
@@ -135,13 +156,14 @@ while running:
                 collected_letters += letter[2]
                 letters.remove(letter)
                 letters.append(spawn_letter())
-                if is_valid_word(collected_letters):
-                    print(f"Valid Word Formed: {collected_letters}")
-                    collected_letters = ""
-                    ai_frozen = 50  # AI freezes for 5 seconds
-                    letters.extend(spawn_letter() for _ in range(5))  # Add exactly 5 extra letters once
+                # if is_valid_word(collected_letters):
+                #     print(f"Valid Word Formed: {collected_letters}")
+                #     collected_letters = ""
+                #     ai_frozen = 100  # AI freezes for 5 seconds
+                #     letters.extend(spawn_letter() for _ in range(5))  # Add exactly 5 extra letters once   
+                check_valid_word()  # Check for valid words after collecting a letter
                 break
-    
+
     # AI Movement
     if ai_frozen > 0:
         ai_frozen -= 1
@@ -156,17 +178,18 @@ while running:
                 letters.remove(target_letter)
                 letters.append(spawn_letter())
                 
-                if is_valid_word(ai_collected_letters):
-                    print(f"AI Formed Valid Word: {ai_collected_letters}")
-                    ai_collected_letters = ""
-                    letters.extend(spawn_letter() for _ in range(5))  # Add exactly 5 extra letters once
+                # if is_valid_word(ai_collected_letters):
+                #     print(f"AI Formed Valid Word: {ai_collected_letters}")
+                #     ai_collected_letters = ""
+                #     letters.extend(spawn_letter() for _ in range(5))  # Add exactly 5 extra letters once
 
+                check_valid_word_ai()  # Check for valid words after collecting a letter
             else:
                 ai_snake.pop()
         else:
     # AI is stuck, make a random move
             possible_moves = [(ai_snake[0][0] + dx, ai_snake[0][1] + dy) 
-                      for dx, dy in [(0, -GRID_SIZE), (0, GRID_SIZE), (-GRID_SIZE, 0), (GRID_SIZE, 0)]
+                    for dx, dy in [(0, -GRID_SIZE), (0, GRID_SIZE), (-GRID_SIZE, 0), (GRID_SIZE, 0)]
                     if 0 <= ai_snake[0][0] + dx < WIDTH and 0 <= ai_snake[0][1] + dy < HEIGHT and 
                     (ai_snake[0][0] + dx, ai_snake[0][1] + dy) not in ai_snake]
     
