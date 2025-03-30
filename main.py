@@ -46,9 +46,12 @@ ai_frozen = 0  # AI freeze timer
 
 # Letter Spawning Function
 def spawn_letter():
-    return (random.randint(0, (WIDTH // GRID_SIZE) - 1) * GRID_SIZE,
-            random.randint(0, (HEIGHT // GRID_SIZE) - 1) * GRID_SIZE,
-            random.choice(string.ascii_uppercase))
+    while True:
+        x = random.randint(0, (WIDTH // GRID_SIZE) - 1) * GRID_SIZE
+        y = random.randint(0, (HEIGHT // GRID_SIZE) - 1) * GRID_SIZE
+        if (x, y) not in snake and (x, y) not in ai_snake:
+            return (x, y, random.choice(string.ascii_uppercase))
+
 
 letters = [spawn_letter() for _ in range(3)]  # Start with 3 letters
 collected_letters = ""
@@ -136,7 +139,7 @@ while running:
                     print(f"Valid Word Formed: {collected_letters}")
                     collected_letters = ""
                     ai_frozen = 50  # AI freezes for 5 seconds
-                    
+                    letters.extend(spawn_letter() for _ in range(5))  # Add exactly 5 extra letters once
                 break
     
     # AI Movement
@@ -156,8 +159,21 @@ while running:
                 if is_valid_word(ai_collected_letters):
                     print(f"AI Formed Valid Word: {ai_collected_letters}")
                     ai_collected_letters = ""
+                    letters.extend(spawn_letter() for _ in range(5))  # Add exactly 5 extra letters once
+
             else:
                 ai_snake.pop()
+        else:
+    # AI is stuck, make a random move
+            possible_moves = [(ai_snake[0][0] + dx, ai_snake[0][1] + dy) 
+                      for dx, dy in [(0, -GRID_SIZE), (0, GRID_SIZE), (-GRID_SIZE, 0), (GRID_SIZE, 0)]
+                    if 0 <= ai_snake[0][0] + dx < WIDTH and 0 <= ai_snake[0][1] + dy < HEIGHT and 
+                    (ai_snake[0][0] + dx, ai_snake[0][1] + dy) not in ai_snake]
+    
+            if possible_moves:
+                next_move = random.choice(possible_moves)  # Pick a random valid move
+            else:
+                next_move = ai_snake[0]  # Stay in place (rare case)
     
     # Draw Snakes and Letters
     for segment in snake:
