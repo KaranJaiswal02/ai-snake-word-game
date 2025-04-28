@@ -14,7 +14,7 @@ short_valid_words = {
     "four", "five", "cool", "look", "make", "game", "word", "play", "code", "read"
 }
 
-WIDTH, HEIGHT = 1550, 780
+WIDTH, HEIGHT = 1550, 770
 GRID_SIZE = 20
 FPS = 7
 
@@ -221,12 +221,22 @@ def spawn_obstacles(num, exclude):
             exclude.append((x, y))
     return obstacles
 
-def draw_snake(snake, color):
+def draw_snake(snake, color, direction):
     for i, segment in enumerate(snake):
         rect = pygame.Rect(segment[0], segment[1], GRID_SIZE, GRID_SIZE)
-        pygame.draw.rect(screen, color, rect, border_radius=5)
+        
+        # Gradient body - darker towards tail
+        shade = max(50, 255 - i*3)
+        body_color = (min(color[0], shade), min(color[1], shade), min(color[2], shade))
+        pygame.draw.rect(screen, body_color, rect, border_radius=5)
+        
+        # Head with eyes looking in movement direction
         if i == 0:
-            pygame.draw.circle(screen, BLACK, rect.center, 4)
+            pygame.draw.rect(screen, color, rect, border_radius=5)
+            eye_offset_x = 5 if direction[0] > 0 else -5 if direction[0] < 0 else 0
+            eye_offset_y = -5 if direction[1] == 0 else (5 if direction[1] > 0 else -5)
+            pygame.draw.circle(screen, WHITE, (rect.centerx + eye_offset_x, rect.centery + eye_offset_y), 4)
+            pygame.draw.circle(screen, BLACK, (rect.centerx + eye_offset_x, rect.centery + eye_offset_y), 2)
 
 def draw_game(snake, ai_snake, letters, word, player_index, ai_index, p_score, ai_score, obstacles, mode, snake2=None, player2_index=0):
     screen.fill(DARK)
@@ -238,10 +248,10 @@ def draw_game(snake, ai_snake, letters, word, player_index, ai_index, p_score, a
             p['x'] = WIDTH
             p['y'] = random.randint(0, HEIGHT)
 
-    draw_snake(snake, GREEN)
-    draw_snake(ai_snake, BLUE)
+    draw_snake(snake, GREEN, direction=(GRID_SIZE, 0))
+    draw_snake(ai_snake, BLUE, direction=(GRID_SIZE, 0))
     if mode == "vs_ai_human2" and snake2:
-        draw_snake(snake2, YELLOW)
+        draw_snake(snake2, YELLOW, direction=(GRID_SIZE, 0))
 
     for x, y, ch in letters:
         pygame.draw.rect(screen, RED, pygame.Rect(x, y, GRID_SIZE, GRID_SIZE), border_radius=3)
