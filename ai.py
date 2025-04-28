@@ -1,11 +1,9 @@
-# deepseek AI game with obstacles and multiplayer but obstacles are not working. passing through obstacles.
-
+import math
 import pygame
 import random
 import heapq
 import nltk
 from nltk.corpus import words
-import time
 import sys
 
 nltk.download('words')
@@ -16,7 +14,7 @@ short_valid_words = {
     "four", "five", "cool", "look", "make", "game", "word", "play", "code", "read"
 }
 
-WIDTH, HEIGHT = 1500, 750
+WIDTH, HEIGHT = 1550, 780
 GRID_SIZE = 20
 FPS = 7
 
@@ -36,13 +34,21 @@ obstacle_symbol = {
 
 pygame.init()
 pygame.mixer.init()
-EMOJI_FONT = pygame.font.Font("seguiemj.ttf", 24)
+try:
+    EMOJI_FONT = pygame.font.Font("seguiemj.ttf", 24)
+except:
+    EMOJI_FONT = pygame.font.SysFont("Arial", 24)
 BIG_FONT = pygame.font.SysFont("consolas", 48)
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("AI Word Snake")
 
-EAT_SOUND = pygame.mixer.Sound("car_door.mp3")
-WORD_SOUND = pygame.mixer.Sound("game.mp3")
+try:
+    EAT_SOUND = pygame.mixer.Sound("car_door.mp3")
+    WORD_SOUND = pygame.mixer.Sound("game.mp3")
+except:
+    EAT_SOUND = pygame.mixer.Sound(buffer=bytearray(44))
+    WORD_SOUND = pygame.mixer.Sound(buffer=bytearray(44))
+
 FONT = pygame.font.SysFont("consolas", 36)
 
 WHITE = (245, 245, 245)
@@ -53,31 +59,94 @@ DARK = (30, 30, 30)
 YELLOW = (255, 215, 0)
 GRAY = (60, 60, 60)
 BLACK = (0, 0, 0)
+PURPLE = (128, 0, 128)
 
-
+# Add to initialization
+particles = []
+for _ in range(50):
+    particles.append({
+        'x': random.randint(0, WIDTH),
+        'y': random.randint(0, HEIGHT),
+        'size': random.randint(1, 3),
+        'speed': random.uniform(0.1, 0.5)
+    })
 
 def choose_mode():
-    screen.fill(BLACK)
+    import math
+    screen_rect = screen.get_rect()
     msg = BIG_FONT.render("Choose Game Mode", True, WHITE)
-    opt1 = FONT.render("1. AI vs Human", True, YELLOW)
-    opt2 = FONT.render("2. AI vs Human vs Human", True, YELLOW)
-    screen.blit(msg, (WIDTH//2 - msg.get_width()//2, HEIGHT//2 - 100))
-    screen.blit(opt1, (WIDTH//2 - opt1.get_width()//2, HEIGHT//2 - 20))
-    screen.blit(opt2, (WIDTH//2 - opt2.get_width()//2, HEIGHT//2 + 40))
-    pygame.display.flip()
+    opt_texts = ["AI vs Human", "AI vs Human vs Human"]
+    selected = 0
+    clock = pygame.time.Clock()
+    t = 0  # time variable for animation
+
+    def draw_gradient_background(tick):
+        top_color = (40, 0, 80)    # deep indigo
+        mid_color = (128, 0, 128)  # vibrant purple
+        bottom_color = (30, 144, 255)  # soft sky blue
+
+        height = screen_rect.height
+        for y in range(height):
+            blend = y / height
+            wave = math.sin(tick + y * 0.01) * 0.1  # gentle animation
+            blend += wave
+            blend = max(0, min(blend, 1))  # clamp to [0,1]
+
+            if blend < 0.5:
+                ratio = blend * 2
+                r = int(top_color[0] * (1 - ratio) + mid_color[0] * ratio)
+                g = int(top_color[1] * (1 - ratio) + mid_color[1] * ratio)
+                b = int(top_color[2] * (1 - ratio) + mid_color[2] * ratio)
+            else:
+                ratio = (blend - 0.5) * 2
+                r = int(mid_color[0] * (1 - ratio) + bottom_color[0] * ratio)
+                g = int(mid_color[1] * (1 - ratio) + bottom_color[1] * ratio)
+                b = int(mid_color[2] * (1 - ratio) + bottom_color[2] * ratio)
+
+            pygame.draw.line(screen, (r, g, b), (0, y), (screen_rect.width, y))
+
 
     while True:
+        clock.tick(60)
+        t += 0.05
+        draw_gradient_background(t)
+        screen.blit(msg, (WIDTH // 2 - msg.get_width() // 2, HEIGHT // 2 - 100))
+
+        for i, text in enumerate(opt_texts):
+            is_selected = (i == selected)
+            font = BIG_FONT if is_selected else FONT
+            color = YELLOW
+            rendered = font.render(text, True, color)
+            rect = rendered.get_rect(center=(WIDTH // 2, HEIGHT // 2 + i * 60))
+
+            if is_selected:
+                # Draw highlight background
+                pygame.draw.rect(screen, (50, 50, 50), rect.inflate(40, 20), border_radius=10)
+                # Fake glow
+                glow_color = (255, 255, 150)
+                for dx, dy in [(-2, 0), (2, 0), (0, -2), (0, 2)]:
+                    glow = font.render(text, True, glow_color)
+                    screen.blit(glow, rect.move(dx, dy))
+                # Draw arrow
+                arrow = FONT.render(">", True, WHITE)
+                arrow_rect = arrow.get_rect(midright=(rect.left - 10, rect.centery))
+                screen.blit(arrow, arrow_rect)
+
+            screen.blit(rendered, rect)
+
+        pygame.display.flip()
+
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
             if e.type == pygame.KEYDOWN:
-                if e.key == pygame.K_1:
-                    return "vs_ai"
-                elif e.key == pygame.K_2:
-                    return "vs_ai_human2"
-
-
+                if e.key == pygame.K_DOWN:
+                    selected = (selected + 1) % len(opt_texts)
+                elif e.key == pygame.K_UP:
+                    selected = (selected - 1) % len(opt_texts)
+                elif e.key == pygame.K_RETURN:
+                    return "vs_ai" if selected == 0 else "vs_ai_human2"
 
 
 def is_valid_word(word):
@@ -124,9 +193,11 @@ def safe_spawn(exclude):
         if (x, y) not in exclude:
             return (x, y)
 
-def spawn_letters(word, snake, ai_snake):
+def spawn_letters(word, snake, ai_snake, snake2=None):
     letters = []
     all_positions = snake + ai_snake
+    if snake2:
+        all_positions += snake2
     for letter in word:
         for _ in range(3):
             while True:
@@ -157,83 +228,152 @@ def draw_snake(snake, color):
         if i == 0:
             pygame.draw.circle(screen, BLACK, rect.center, 4)
 
-def draw_game(snake, ai_snake, letters, word, player_index, ai_index, p_score, ai_score, obstacles, mode, snake2=None):
+def draw_game(snake, ai_snake, letters, word, player_index, ai_index, p_score, ai_score, obstacles, mode, snake2=None, player2_index=0):
     screen.fill(DARK)
+    #deepseek
+    for p in particles:
+        pygame.draw.circle(screen, (80, 80, 80), (int(p['x']), int(p['y'])), p['size'])
+        p['x'] -= p['speed']
+        if p['x'] < 0:
+            p['x'] = WIDTH
+            p['y'] = random.randint(0, HEIGHT)
+
     draw_snake(snake, GREEN)
     draw_snake(ai_snake, BLUE)
-    if mode == "vs_ai_human2":
-      draw_snake(snake2, YELLOW)
+    if mode == "vs_ai_human2" and snake2:
+        draw_snake(snake2, YELLOW)
 
     for x, y, ch in letters:
         pygame.draw.rect(screen, RED, pygame.Rect(x, y, GRID_SIZE, GRID_SIZE), border_radius=3)
         screen.blit(EMOJI_FONT.render(ch, True, WHITE), (x + 2, y + 1))
+    
     screen.blit(EMOJI_FONT.render("Target Word: " + word.upper(), True, YELLOW), (WIDTH//2 - 100, 10))
-    screen.blit(EMOJI_FONT.render(f"Player Collected: {player_index}/{len(word)}", True, WHITE), (20, 10))
-    screen.blit(EMOJI_FONT.render(f"AI Collected: {ai_index}/{len(word)}", True, WHITE), (20, 40))
+    
+    if mode == "vs_ai_human2":
+        screen.blit(EMOJI_FONT.render(f"Player 1: {player_index}/{len(word)}", True, GREEN), (20, 10))
+        screen.blit(EMOJI_FONT.render(f"Player 2: {player2_index}/{len(word)}", True, YELLOW), (20, 40))
+        screen.blit(EMOJI_FONT.render(f"AI: {ai_index}/{len(word)}", True, BLUE), (20, 70))
+    else:
+        screen.blit(EMOJI_FONT.render(f"Player: {player_index}/{len(word)}", True, GREEN), (20, 10))
+        screen.blit(EMOJI_FONT.render(f"AI: {ai_index}/{len(word)}", True, BLUE), (20, 40))
+    
     screen.blit(EMOJI_FONT.render(f"Player Score: {p_score}", True, GREEN), (950, 10))
     screen.blit(EMOJI_FONT.render(f"AI Score: {ai_score}", True, BLUE), (950, 40))
+    
     for x, y, t in obstacles:
         pygame.draw.rect(screen, obstacle_color[t], pygame.Rect(x, y, GRID_SIZE, GRID_SIZE), border_radius=3)
         screen.blit(EMOJI_FONT.render(obstacle_symbol[t], True, WHITE), (x + 2, y + 2))
+    
     pygame.display.flip()
 
 def show_message(text, sub=""):
-    screen.fill(BLACK)
+    tick = pygame.time.get_ticks() / 500  # animate the gradient over time
+
+    # --- Gradient background like menu ---
+    top_color = (40, 0, 80)
+    mid_color = (128, 0, 128)
+    bottom_color = (30, 144, 255)
+    height = screen.get_height()
+
+    for y in range(height):
+        blend = y / height
+        wave = math.sin(tick + y * 0.01) * 0.1
+        blend += wave
+        blend = max(0, min(blend, 1))
+
+        if blend < 0.5:
+            ratio = blend * 2
+            r = int(top_color[0] * (1 - ratio) + mid_color[0] * ratio)
+            g = int(top_color[1] * (1 - ratio) + mid_color[1] * ratio)
+            b = int(top_color[2] * (1 - ratio) + mid_color[2] * ratio)
+        else:
+            ratio = (blend - 0.5) * 2
+            r = int(mid_color[0] * (1 - ratio) + bottom_color[0] * ratio)
+            g = int(mid_color[1] * (1 - ratio) + bottom_color[1] * ratio)
+            b = int(mid_color[2] * (1 - ratio) + bottom_color[2] * ratio)
+
+        pygame.draw.line(screen, (r, g, b), (0, y), (WIDTH, y))
+
+    # --- Render message text ---
     msg = BIG_FONT.render(text, True, WHITE)
     screen.blit(msg, (WIDTH//2 - msg.get_width()//2, HEIGHT//2 - 50))
+
     if sub:
         submsg = EMOJI_FONT.render(sub, True, GRAY)
         screen.blit(submsg, (WIDTH//2 - submsg.get_width()//2, HEIGHT//2 + 20))
+
     pygame.display.flip()
 
-def ask_play_again():
-    show_message("Game Over", "Press R to Replay or ESC to Exit")
+def show_scorecard(player_score, ai_score, player2_score=None):
+    def draw_gradient_background(tick):
+        top_color = (40, 0, 80)    # deep indigo
+        mid_color = (128, 0, 128)  # vibrant purple
+        bottom_color = (30, 144, 255)  # soft sky blue
+
+        height = screen.get_height()
+        for y in range(height):
+            blend = y / height
+            wave = math.sin(tick + y * 0.01) * 0.05  # more subtle animation
+            blend += wave
+            blend = max(0, min(blend, 1))  # clamp to [0,1]
+
+            if blend < 0.5:
+                ratio = blend * 2
+                r = int(top_color[0] * (1 - ratio) + mid_color[0] * ratio)
+                g = int(top_color[1] * (1 - ratio) + mid_color[1] * ratio)
+                b = int(top_color[2] * (1 - ratio) + mid_color[2] * ratio)
+            else:
+                ratio = (blend - 0.5) * 2
+                r = int(mid_color[0] * (1 - ratio) + bottom_color[0] * ratio)
+                g = int(mid_color[1] * (1 - ratio) + bottom_color[1] * ratio)
+                b = int(mid_color[2] * (1 - ratio) + bottom_color[2] * ratio)
+
+            pygame.draw.line(screen, (r, g, b), (0, y), (screen.get_width(), y))
+
+
+    tick = 0
     while True:
-        for e in pygame.event.get():
-            if e.type == pygame.QUIT:
-                return False
-            if e.type == pygame.KEYDOWN:
-                if e.key == pygame.K_r:
-                    return True
-                if e.key == pygame.K_ESCAPE:
-                    return False
+        draw_gradient_background(tick)
+        tick += 0.05
 
+        game_over_text = BIG_FONT.render("Game Over", True, RED)
+        player_text = FONT.render(f"Player Score: {player_score}", True, GREEN)
+        ai_text = FONT.render(f"AI Score: {ai_score}", True, BLUE)
+        
+        if player2_score is not None:
+            player2_text = FONT.render(f"Player 2 Score: {player2_score}", True, YELLOW)
+            texts = [game_over_text, player_text, player2_text, ai_text]
+        else:
+            texts = [game_over_text, player_text, ai_text]
+        
+        for i, text in enumerate(texts):
+            screen.blit(text, (WIDTH // 2 - text.get_width() // 2, HEIGHT // 2 - 100 + i * 40))
+        
+        replay_text = FONT.render("Press R to Replay or ESC to Quit", True, GRAY)
+        screen.blit(replay_text, (WIDTH // 2 - replay_text.get_width() // 2, HEIGHT // 2 + 100))
 
-def show_scorecard(player_score, ai_score):
-    screen.fill((0, 0, 0))
-    game_over_text = BIG_FONT.render("Game Over", True, (255, 0, 0))
-    player_text = FONT.render(f"Player Score: {player_score}", True, (255, 255, 255))
-    ai_text = FONT.render(f"AI Score: {ai_score}", True, (255, 255, 255))
-    replay_text = FONT.render("Press R to Replay or ESC to Quit", True, (200, 200, 200))
+        pygame.display.flip()
 
-    screen.blit(game_over_text, (WIDTH // 2 - game_over_text.get_width() // 2, HEIGHT // 2 - 100))
-    screen.blit(player_text, (WIDTH // 2 - player_text.get_width() // 2, HEIGHT // 2 - 40))
-    screen.blit(ai_text, (WIDTH // 2 - ai_text.get_width() // 2, HEIGHT // 2))
-    screen.blit(replay_text, (WIDTH // 2 - replay_text.get_width() // 2, HEIGHT // 2 + 60))
-
-    pygame.display.flip()
-
-    waiting = True
-    while waiting:
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
             if e.type == pygame.KEYDOWN:
                 if e.key == pygame.K_r:
-                    waiting = False
                     return True
                 if e.key == pygame.K_ESCAPE:
                     pygame.quit()
                     sys.exit()
-    return False
-
 
 def main():
     while True:
         mode = choose_mode()
         snake = [safe_spawn([])]
         ai_snake = [safe_spawn(snake)]
+        snake2 = None
+        direction2 = None
+        player2_index = 0
+        player2_score = 0
 
         if mode == "vs_ai_human2":
             snake2 = [safe_spawn(snake + ai_snake)]
@@ -253,8 +393,10 @@ def main():
         eagle_tick = 0
 
         word = get_random_word()
-        letters = spawn_letters(word, snake, ai_snake)
+        letters = spawn_letters(word, snake, ai_snake, snake2)
         occupied = snake + ai_snake + [(l[0], l[1]) for l in letters]
+        if snake2:
+            occupied += snake2
         obstacles = spawn_obstacles(5 + player_score // 5, occupied)
         eagle_list = [o for o in obstacles if o[2] == 'eagle']
         if eagle_list:
@@ -278,16 +420,8 @@ def main():
                     return
 
             keys = pygame.key.get_pressed()
-            if mode == "vs_ai_human2":
-                if keys[pygame.K_w] and direction2 != (0, GRID_SIZE):
-                    direction2 = (0, -GRID_SIZE)
-                elif keys[pygame.K_s] and direction2 != (0, -GRID_SIZE):
-                    direction2 = (0, GRID_SIZE)
-                elif keys[pygame.K_a] and direction2 != (GRID_SIZE, 0):
-                    direction2 = (-GRID_SIZE, 0)
-                elif keys[pygame.K_d] and direction2 != (-GRID_SIZE, 0):
-                    direction2 = (GRID_SIZE, 0)
-
+            
+            # Player 1 controls
             if keys[pygame.K_UP] and direction != (0, GRID_SIZE):
                 direction = (0, -GRID_SIZE)
             elif keys[pygame.K_DOWN] and direction != (0, -GRID_SIZE):
@@ -297,47 +431,18 @@ def main():
             elif keys[pygame.K_RIGHT] and direction != (-GRID_SIZE, 0):
                 direction = (GRID_SIZE, 0)
 
-            if mode == "vs_ai_human2":
-                new_head2 = (snake2[0][0] + direction2[0], snake2[0][1] + direction2[1])
-                if (new_head2 in snake2[1:] or new_head2 in snake or new_head2 in ai_snake or
-                        new_head2[0] < 0 or new_head2[0] >= WIDTH or
-                        new_head2[1] < 0 or new_head2[1] >= HEIGHT):
-                    running = False
-                    break
-
-                collided2 = next((o for o in obstacles if (o[0], o[1]) == new_head2), None)
-                if collided2 and collided2[2] == "fire":
-                    running = False
-                    break
-
-                snake2.insert(0, new_head2)
-                letter_collected2 = False
-                for l in letters[:]:
-                    if (l[0], l[1]) == new_head2 and l[2] == word[player_index].upper():
-                        pygame.mixer.Sound.play(EAT_SOUND)
-                        player_index += 1
-                        player_score += 1
-                        letters.remove(l)
-                        letter_collected2 = True
-                        break
-                if not letter_collected2:
-                    snake2.pop()
-
-            # Player Snake Movement
+            # Player 1 movement
             new_head = (snake[0][0] + direction[0], snake[0][1] + direction[1])
             if (new_head in snake[1:] or new_head in ai_snake or
-                    new_head[0] < 0 or new_head[0] >= WIDTH or
-                    new_head[1] < 0 or new_head[1] >= HEIGHT):
+                new_head[0] < 0 or new_head[0] >= WIDTH or
+                new_head[1] < 0 or new_head[1] >= HEIGHT or
+                any(new_head == (o[0], o[1]) for o in obstacles)):  # Obstacle collision
                 running = False
                 break
 
-            collided_obstacle = next((o for o in obstacles if (o[0], o[1]) == new_head), None)
-            if collided_obstacle:
-                if collided_obstacle[2] == "fire":
-                    running = False
-                    break
-                elif collided_obstacle[2] == "water":
-                    slow_timer = 7
+            if mode == "vs_ai_human2" and new_head in snake2:
+                running = False
+                break
 
             snake.insert(0, new_head)
             letter_collected = False
@@ -356,16 +461,65 @@ def main():
             if player_index == len(word):
                 pygame.mixer.Sound.play(WORD_SOUND)
                 player_score += 3
-                ai_freeze_timer = 30
+                ai_freeze_timer = 50
                 word = get_random_word()
                 player_index = 0
                 ai_index = 0
-                letters = spawn_letters(word, snake, ai_snake)
+                letters = spawn_letters(word, snake, ai_snake, snake2)
                 occupied = snake + ai_snake + [(l[0], l[1]) for l in letters]
-                obstacles = spawn_obstacles(5 + player_score // 5, occupied)
+                if snake2:
+                    occupied += snake2
+                obstacles = spawn_obstacles(5 + max(player_score, player2_score if mode == "vs_ai_human2" else player_score) // 5, occupied)
                 eagle_list = [o for o in obstacles if o[2] == 'eagle']
                 if eagle_list:
                     eagle_pos = [eagle_list[0][0], eagle_list[0][1]]
+
+            # Player 2 controls and movement (if in vs_ai_human2 mode)
+            if mode == "vs_ai_human2":
+                if keys[pygame.K_w] and direction2 != (0, GRID_SIZE):
+                    direction2 = (0, -GRID_SIZE)
+                elif keys[pygame.K_s] and direction2 != (0, -GRID_SIZE):
+                    direction2 = (0, GRID_SIZE)
+                elif keys[pygame.K_a] and direction2 != (GRID_SIZE, 0):
+                    direction2 = (-GRID_SIZE, 0)
+                elif keys[pygame.K_d] and direction2 != (-GRID_SIZE, 0):
+                    direction2 = (GRID_SIZE, 0)
+
+                new_head2 = (snake2[0][0] + direction2[0], snake2[0][1] + direction2[1])
+                if (new_head2 in snake2[1:] or new_head2 in snake or new_head2 in ai_snake or
+                    new_head2[0] < 0 or new_head2[0] >= WIDTH or
+                    new_head2[1] < 0 or new_head2[1] >= HEIGHT or
+                    any(new_head2 == (o[0], o[1]) for o in obstacles)):  # Obstacle collision
+                    running = False
+                    break
+
+                snake2.insert(0, new_head2)
+                letter_collected2 = False
+                for l in letters[:]:
+                    if (l[0], l[1]) == new_head2 and l[2] == word[player2_index].upper():
+                        pygame.mixer.Sound.play(EAT_SOUND)
+                        player2_index += 1
+                        player2_score += 1
+                        letters.remove(l)
+                        letter_collected2 = True
+                        break
+                if not letter_collected2:
+                    snake2.pop()
+
+                if player2_index == len(word):
+                    pygame.mixer.Sound.play(WORD_SOUND)
+                    player2_score += 3
+                    ai_freeze_timer = 30
+                    word = get_random_word()
+                    player_index = 0
+                    player2_index = 0
+                    ai_index = 0
+                    letters = spawn_letters(word, snake, ai_snake, snake2)
+                    occupied = snake + ai_snake + snake2 + [(l[0], l[1]) for l in letters]
+                    obstacles = spawn_obstacles(5 + max(player_score, player2_score) // 5, occupied)
+                    eagle_list = [o for o in obstacles if o[2] == 'eagle']
+                    if eagle_list:
+                        eagle_pos = [eagle_list[0][0], eagle_list[0][1]]
 
             # AI Movement
             if ai_freeze_timer <= 0:
@@ -373,14 +527,9 @@ def main():
                     targets = [(x, y) for x, y, c in letters if c == word[ai_index].upper()]
                     if targets:
                         closest = min(targets, key=lambda pos: heuristic(ai_snake[0], pos))
-                        path = astar(ai_snake[0], closest, ai_snake + snake, WIDTH, HEIGHT, obstacles)
+                        path = astar(ai_snake[0], closest, ai_snake + snake + (snake2 if snake2 else []), WIDTH, HEIGHT, obstacles)
                         if path:
                             next_pos = path[0]
-                            if next((o for o in obstacles if (o[0], o[1]) == next_pos and o[2] == "fire"), None):
-                                running = False
-                                break
-                            if next((o for o in obstacles if (o[0], o[1]) == next_pos and o[2] == "water"), None):
-                                ai_slow_timer = 7
                             ai_snake.insert(0, next_pos)
                             if next_pos == closest:
                                 pygame.mixer.Sound.play(EAT_SOUND)
@@ -398,8 +547,13 @@ def main():
                 ai_freeze_timer -= 1
 
             if (ai_snake[0] in ai_snake[1:] or ai_snake[0] in snake or
-                    ai_snake[0][0] < 0 or ai_snake[0][0] >= WIDTH or
-                    ai_snake[0][1] < 0 or ai_snake[0][1] >= HEIGHT):
+                ai_snake[0][0] < 0 or ai_snake[0][0] >= WIDTH or
+                ai_snake[0][1] < 0 or ai_snake[0][1] >= HEIGHT or
+                any(ai_snake[0] == (o[0], o[1]) for o in obstacles)):  # Obstacle collision
+                running = False
+                break
+
+            if mode == "vs_ai_human2" and ai_snake[0] in snake2:
                 running = False
                 break
 
@@ -409,9 +563,13 @@ def main():
                 word = get_random_word()
                 player_index = 0
                 ai_index = 0
-                letters = spawn_letters(word, snake, ai_snake)
+                if mode == "vs_ai_human2":
+                    player2_index = 0
+                letters = spawn_letters(word, snake, ai_snake, snake2)
                 occupied = snake + ai_snake + [(l[0], l[1]) for l in letters]
-                obstacles = spawn_obstacles(5 + player_score // 5, occupied)
+                if snake2:
+                    occupied += snake2
+                obstacles = spawn_obstacles(5 + max(player_score, player2_score if mode == "vs_ai_human2" else player_score) // 5, occupied)
                 eagle_list = [o for o in obstacles if o[2] == 'eagle']
                 if eagle_list:
                     eagle_pos = [eagle_list[0][0], eagle_list[0][1]]
@@ -430,7 +588,7 @@ def main():
                     if o[2] == 'eagle':
                         obstacles[i] = (eagle_pos[0], eagle_pos[1], 'eagle')
 
-            draw_game(snake, ai_snake, letters, word, player_index, ai_index, player_score, ai_score, obstacles, mode)
+            draw_game(snake, ai_snake, letters, word, player_index, ai_index, player_score, ai_score, obstacles, mode, snake2, player2_index)
 
             # Apply slowdown
             delay = 0.05 if slow_timer > 0 else 0
@@ -440,9 +598,12 @@ def main():
             pygame.time.delay(int(delay * 1000))
             clock.tick(FPS)
 
-        if not show_scorecard(player_score, ai_score):
-            break
-
+        if mode == "vs_ai_human2":
+            if not show_scorecard(player_score, ai_score, player2_score):
+                break
+        else:
+            if not show_scorecard(player_score, ai_score):
+                break
 
 if __name__ == "__main__":
     main()
