@@ -241,12 +241,53 @@ def draw_snake(snake, color, direction):
 def draw_game(snake, ai_snake, letters, word, player_index, ai_index, p_score, ai_score, obstacles, mode, snake2=None, player2_index=0):
     screen.fill(DARK)
     #deepseek
+    # for p in particles:
+    #     pygame.draw.circle(screen, (80, 80, 80), (int(p['x']), int(p['y'])), p['size'])
+    #     p['x'] -= p['speed']
+    #     if p['x'] < 0:
+    #         p['x'] = WIDTH
+    #         p['y'] = random.randint(0, HEIGHT)
     for p in particles:
-        pygame.draw.circle(screen, (80, 80, 80), (int(p['x']), int(p['y'])), p['size'])
-        p['x'] -= p['speed']
-        if p['x'] < 0:
-            p['x'] = WIDTH
-            p['y'] = random.randint(0, HEIGHT)
+        if 'speed' in p:
+            # Background floating particle
+            pygame.draw.circle(screen, (80, 80, 80), (int(p['x']), int(p['y'])), p['size'])
+            p['x'] -= p['speed']
+            if p['x'] < 0:
+                p['x'] = WIDTH
+                p['y'] = random.randint(0, HEIGHT)
+        else:
+            # Burst particles from letter collection
+            pygame.draw.circle(screen, p['color'], (int(p['x']), int(p['y'])), p['size'])
+            p['x'] += p['speed_x']
+            p['y'] += p['speed_y']
+            p['life'] -= 10
+        #can remove if we dont like it
+
+   
+    # Semi-transparent score panel
+    score_panel = pygame.Surface((WIDTH, 80), pygame.SRCALPHA)
+    score_panel.fill((30, 30, 30, 180))
+    pygame.draw.rect(score_panel, (255, 255, 255, 30), (0, 0, WIDTH, 80), 2)
+    screen.blit(score_panel, (0, 0))
+    
+    # Progress bar for word completion
+    pygame.draw.rect(screen, (60, 60, 60), (WIDTH//2 - 150, 50, 300, 10), border_radius=5)
+    progress = player_index/len(word) * 300
+    pygame.draw.rect(screen, GREEN, (WIDTH//2 - 150, 50, progress, 10), border_radius=5)
+    
+    # Score with icons
+    screen.blit(EMOJI_FONT.render("🐍", True, WHITE), (20, 15))
+    screen.blit(FONT.render(f"{p_score}", True, GREEN), (50, 15))
+    
+    screen.blit(EMOJI_FONT.render("🤖", True, WHITE), (120, 15))
+    screen.blit(FONT.render(f"{ai_score}", True, BLUE), (150, 15))
+    
+    # Word display with background
+    word_bg = pygame.Surface((FONT.size(word.upper())[0] + 20, 40), pygame.SRCALPHA)
+    word_bg.fill((0, 0, 0, 150))
+    screen.blit(word_bg, (WIDTH//2 - word_bg.get_width()//2, 10))
+    screen.blit(FONT.render(word.upper(), True, YELLOW), (WIDTH//2 - FONT.size(word.upper())[0]//2, 15))
+
 
     draw_snake(snake, GREEN, direction=(GRID_SIZE, 0))
     draw_snake(ai_snake, BLUE, direction=(GRID_SIZE, 0))
@@ -339,8 +380,6 @@ def show_scorecard(player_score, ai_score, player2_score=None):
                 b = int(mid_color[2] * (1 - ratio) + bottom_color[2] * ratio)
 
             pygame.draw.line(screen, (r, g, b), (0, y), (screen.get_width(), y))
-
-
     tick = 0
     while True:
         draw_gradient_background(tick)
@@ -463,6 +502,19 @@ def main():
                     player_score += 1
                     letters.remove(l)
                     letter_collected = True
+                    # Add to letter collection logic
+                    if letter_collected:
+                        # Create particle effect
+                        for _ in range(10):
+                            particles.append({
+                                'x': new_head[0] + GRID_SIZE//2,
+                                'y': new_head[1] + GRID_SIZE//2,
+                                'size': random.randint(2, 4),
+                                'speed_x': random.uniform(-2, 2),
+                                'speed_y': random.uniform(-2, 2),
+                                'color': (random.randint(200, 255), random.randint(100, 200), random.randint(50, 150)),
+                                'life': 30
+                            })
                     break
 
             if not letter_collected:
@@ -512,6 +564,19 @@ def main():
                         player2_score += 1
                         letters.remove(l)
                         letter_collected2 = True
+                        # Add to letter collection logic
+                        if letter_collected2:
+                            # Create particle effect
+                            for _ in range(10):
+                                particles.append({
+                                    'x': new_head[0] + GRID_SIZE//2,
+                                    'y': new_head[1] + GRID_SIZE//2,
+                                    'size': random.randint(2, 4),
+                                    'speed_x': random.uniform(-2, 2),
+                                    'speed_y': random.uniform(-2, 2),
+                                    'color': (random.randint(200, 255), random.randint(100, 200), random.randint(50, 150)),
+                                    'life': 30
+                                })
                         break
                 if not letter_collected2:
                     snake2.pop()
