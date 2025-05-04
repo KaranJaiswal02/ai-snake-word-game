@@ -386,39 +386,58 @@ def show_instructions(mode):
     waiting = True
     INSTR_FONT = pygame.font.SysFont("Courier New", 22, bold=True)
 
-    # Instruction Text - Plain text using box-drawing style
     instruction_text = [
         "╔═════════════ INSTRUCTIONS ═════════════╗",
         "",
         "🏁 OBJECTIVE:",
-        "  - Collect letters to form valid English words.",
-        "  - Use arrows (Player1) or WASD (Player2) to move.",
-        "  - Avoid obstacles like water, fire, and eagle.",
+        "  - Form valid English words by collecting letters in order.",
+        "  - Navigate safely using movement keys.",
+        "  - Compete with AI (and another player, if enabled).",
         "",
         "🔣 CONTROLS:",
-        "  - [↑ ↓ ← →] – Player 1",
-        "  - [W A S D] – Player 2 (if active)",
+        "  - Player 1: [↑ ↓ ← →] Arrow Keys",
+        "  - Player 2: [W A S D] (Enabled in 2P + AI Mode)",
         "  - [SPACE] – Start the Game",
         "  - [ESC] – Quit anytime",
         "",
-        "🔥 OBSTACLES:",
-        "  - Water ~ Slows you down.",
-        "  - Fire ~ Instant Game Over.",
-        "  - Pit ~ Skips your turn.",
-        "  - Eagle ~ Chases the nearest snake.",
+        "🧠 AI BEHAVIOR:",
+        "  - Uses pathfinding (A*) to collect letters.",
+        "  - Competes for the same word – don't let it win!",
+        "",
+        "🔥 OBSTACLES (All are lethal):",
+        "  - Water 💧  – Instant death on contact.",
+        "  - Fire 🔥   – Instant death on contact.",
+        "  - Pit 🕳️     – Instant death on contact.",
+        "  - Eagle 🦅  – Hunts and eliminates the nearest snake.",
         "",
         "🏆 TIPS:",
-        "  - Plan words before collecting letters.",
-        "  - AI is smart — be smarter.",
+        "  - Plan your path before chasing letters.",
+        "  - Avoid head-on collisions and traps.",
+        "  - Be faster and smarter than the AI.",
+        "  - Completing a word freezes the AI for 5 seconds!",
         "",
         "Press SPACE to start...",
         "╚════════════════════════════════════════╝",
     ]
 
+    scroll_offset = 0
+    scroll_speed = 20  # Increased scroll speed for better responsiveness
+    line_height = 30
+    total_text_height = len(instruction_text) * line_height
+    max_scroll = max(0, total_text_height - HEIGHT + 100)  # Added some padding
+
+    # Create a transparent surface for the instructions
+    instr_surface = pygame.Surface((WIDTH - 100, total_text_height), pygame.SRCALPHA)
+    
+    # Pre-render all instruction lines onto the surface
+    for i, line in enumerate(instruction_text):
+        rendered_line = INSTR_FONT.render(line, True, (255, 255, 255))
+        instr_surface.blit(rendered_line, (0, i * line_height))
+
     while waiting:
         tick = pygame.time.get_ticks() / 500
 
-        # Gradient background
+        # Gradient background (same as before)
         top_color = (40, 0, 80)
         mid_color = (128, 0, 128)
         bottom_color = (30, 144, 255)
@@ -443,10 +462,21 @@ def show_instructions(mode):
 
             pygame.draw.line(screen, (r, g, b), (0, y), (WIDTH, y))
 
-        # Render all lines
-        for i, line in enumerate(instruction_text):
-            rendered_line = INSTR_FONT.render(line, True, (255, 255, 255))
-            screen.blit(rendered_line, (50, 40 + i * 30))
+        # Draw scrollable instructions
+        visible_height = HEIGHT - 100  # Leave some margin at top and bottom
+        screen.blit(instr_surface, (50, 50), (0, scroll_offset, WIDTH - 100, visible_height))
+
+        # Draw scroll indicator if there's more content to scroll
+        if max_scroll > 0:
+            # Calculate scroll bar position and size
+            scroll_ratio = scroll_offset / max_scroll
+            scrollbar_height = max(30, visible_height * (visible_height / total_text_height))
+            scrollbar_y = 50 + (visible_height - scrollbar_height) * scroll_ratio
+            
+            # Draw scroll bar track
+            pygame.draw.rect(screen, (100, 100, 100, 150), (WIDTH - 20, 50, 10, visible_height), 0, 5)
+            # Draw scroll bar thumb
+            pygame.draw.rect(screen, (200, 200, 200, 200), (WIDTH - 20, scrollbar_y, 10, scrollbar_height), 0, 5)
 
         pygame.display.flip()
 
@@ -455,8 +485,22 @@ def show_instructions(mode):
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
-                waiting = False
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    waiting = False
+                elif event.key == pygame.K_ESCAPE:
+                    pygame.quit()
+                    sys.exit()
+            # Handle mouse wheel scrolling
+            if event.type == pygame.MOUSEWHEEL:
+                scroll_offset = max(0, min(scroll_offset - event.y * scroll_speed, max_scroll))
+        
+        # Handle continuous scrolling with arrow keys
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_DOWN]:
+            scroll_offset = min(scroll_offset + scroll_speed, max_scroll)
+        if keys[pygame.K_UP]:
+            scroll_offset = max(scroll_offset - scroll_speed, 0)
 
 def main():
     while True:
