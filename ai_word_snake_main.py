@@ -14,7 +14,7 @@ short_valid_words = {
     "four", "five", "cool", "look", "make", "game", "word", "play", "code", "read"
 }
 
-WIDTH, HEIGHT = 1550, 770
+WIDTH, HEIGHT = 1550, 775
 GRID_SIZE = 20
 FPS = 7
 
@@ -60,6 +60,8 @@ YELLOW = (255, 215, 0)
 GRAY = (60, 60, 60)
 BLACK = (0, 0, 0)
 PURPLE = (128, 0, 128)
+BACKGROUND_COLOR = (0, 0, 0)  # Black background
+
 
 # Add to initialization
 particles = []
@@ -241,6 +243,7 @@ def draw_snake(snake, color, direction):
 def draw_game(snake, ai_snake, letters, word, player_index, ai_index, p_score, ai_score, obstacles, mode, snake2=None, player2_index=0):
     screen.fill(DARK)
     #deepseek
+    #it was commented till before for loop forgot why commented so uncommented it
     # for p in particles:
     #     pygame.draw.circle(screen, (80, 80, 80), (int(p['x']), int(p['y'])), p['size'])
     #     p['x'] -= p['speed']
@@ -260,14 +263,12 @@ def draw_game(snake, ai_snake, letters, word, player_index, ai_index, p_score, a
             pygame.draw.circle(screen, p['color'], (int(p['x']), int(p['y'])), p['size'])
             p['x'] += p['speed_x']
             p['y'] += p['speed_y']
-            p['life'] -= 10
+            p['life'] -= 50
         #can remove if we dont like it
-
-   
+        #   
     # Semi-transparent score panel
     score_panel = pygame.Surface((WIDTH, 80), pygame.SRCALPHA)
     score_panel.fill((30, 30, 30, 180))
-    pygame.draw.rect(score_panel, (255, 255, 255, 30), (0, 0, WIDTH, 80), 2)
     screen.blit(score_panel, (0, 0))
     
     # Progress bar for word completion
@@ -298,7 +299,7 @@ def draw_game(snake, ai_snake, letters, word, player_index, ai_index, p_score, a
         pygame.draw.rect(screen, RED, pygame.Rect(x, y, GRID_SIZE, GRID_SIZE), border_radius=3)
         screen.blit(EMOJI_FONT.render(ch, True, WHITE), (x + 2, y + 1))
     
-    screen.blit(EMOJI_FONT.render("Target Word: " + word.upper(), True, YELLOW), (WIDTH//2 - 100, 10))
+   # screen.blit(EMOJI_FONT.render("Target Word: " + word.upper(), True, YELLOW), (WIDTH//2 - 100, 10))
     
     if mode == "vs_ai_human2":
         screen.blit(EMOJI_FONT.render(f"Player 1: {player_index}/{len(word)}", True, GREEN), (20, 10))
@@ -452,15 +453,43 @@ def main():
             eagle_pos = [eagle_list[0][0], eagle_list[0][1]]
 
         show_message("Press SPACE to start")
+        # while True:
+        #     for e in pygame.event.get():
+        #         if e.type == pygame.QUIT:
+        #             return
+        #         if e.type == pygame.KEYDOWN and e.key == pygame.K_SPACE:
+        #             break
+        #     else:
+        #         continue
+        #     break
         while True:
             for e in pygame.event.get():
                 if e.type == pygame.QUIT:
                     return
                 if e.type == pygame.KEYDOWN and e.key == pygame.K_SPACE:
+                    # Countdown before starting
+                    for count in range(5, 0, -1):
+                        screen.fill(BACKGROUND_COLOR)
+                        draw_game(snake, ai_snake, letters, word, player_index, ai_index, player_score, ai_score, obstacles, mode, snake2, player2_index)
+                        text = FONT.render(str(count), True, (255, 255, 255))
+                        rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+                        screen.blit(text, rect)
+                        pygame.display.flip()
+                        pygame.time.delay(1000)
+
+                    # Optional 'GO!' flash
+                    screen.fill(BACKGROUND_COLOR)
+                    draw_game(snake, ai_snake, letters, word, player_index, ai_index, player_score, ai_score, obstacles, mode, snake2, player2_index)
+                    go_text = FONT.render("GO!", True, (0, 255, 0))
+                    go_rect = go_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+                    screen.blit(go_text, go_rect)
+                    pygame.display.flip()
+                    pygame.time.delay(500)
                     break
             else:
                 continue
             break
+
 
         running = True
         while running:
@@ -575,7 +604,7 @@ def main():
                                     'speed_x': random.uniform(-2, 2),
                                     'speed_y': random.uniform(-2, 2),
                                     'color': (random.randint(200, 255), random.randint(100, 200), random.randint(50, 150)),
-                                    'life': 30
+                                    'life': 50
                                 })
                         break
                 if not letter_collected2:
