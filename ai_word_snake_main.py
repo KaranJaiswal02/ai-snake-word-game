@@ -318,44 +318,6 @@ def draw_game(snake, ai_snake, letters, word, player_index, ai_index, p_score, a
     
     pygame.display.flip()
 
-def show_message(text, sub=""):
-    tick = pygame.time.get_ticks() / 500  # animate the gradient over time
-
-    # --- Gradient background like menu ---
-    top_color = (40, 0, 80)
-    mid_color = (128, 0, 128)
-    bottom_color = (30, 144, 255)
-    height = screen.get_height()
-
-    for y in range(height):
-        blend = y / height
-        wave = math.sin(tick + y * 0.01) * 0.1
-        blend += wave
-        blend = max(0, min(blend, 1))
-
-        if blend < 0.5:
-            ratio = blend * 2
-            r = int(top_color[0] * (1 - ratio) + mid_color[0] * ratio)
-            g = int(top_color[1] * (1 - ratio) + mid_color[1] * ratio)
-            b = int(top_color[2] * (1 - ratio) + mid_color[2] * ratio)
-        else:
-            ratio = (blend - 0.5) * 2
-            r = int(mid_color[0] * (1 - ratio) + bottom_color[0] * ratio)
-            g = int(mid_color[1] * (1 - ratio) + bottom_color[1] * ratio)
-            b = int(mid_color[2] * (1 - ratio) + bottom_color[2] * ratio)
-
-        pygame.draw.line(screen, (r, g, b), (0, y), (WIDTH, y))
-
-    # --- Render message text ---
-    msg = BIG_FONT.render(text, True, WHITE)
-    screen.blit(msg, (WIDTH//2 - msg.get_width()//2, HEIGHT//2 - 50))
-
-    if sub:
-        submsg = EMOJI_FONT.render(sub, True, GRAY)
-        screen.blit(submsg, (WIDTH//2 - submsg.get_width()//2, HEIGHT//2 + 20))
-
-    pygame.display.flip()
-
 def show_scorecard(player_score, ai_score, player2_score=None):
     def draw_gradient_background(tick):
         top_color = (40, 0, 80)    # deep indigo
@@ -415,9 +377,83 @@ def show_scorecard(player_score, ai_score, player2_score=None):
                     pygame.quit()
                     sys.exit()
 
+def show_instructions(mode):
+    tick_start = pygame.time.get_ticks() / 500  # for animated gradient
+
+    instructions = [
+        "📜 INSTRUCTIONS",
+        "===============",
+        "🧍 Player 1 Controls: Arrow Keys",
+    ]
+    if mode == "vs_ai":
+        instructions += [
+            "🤖 AI competes for the same word.",
+            "🔥 Avoid yourself, the AI, and obstacles.",
+        ]
+    elif mode == "vs_ai_human2":
+        instructions += [
+            "🧍 Player 2 Controls: W A S D",
+            "⚔️ Compete with each other and the AI.",
+            "🔥 Avoid crashing into snakes or obstacles.",
+        ]
+
+    instructions += [
+        "🔤 Collect letters in the correct order.",
+        "🔥 Fire ends your game instantly!",
+        "💧 Water slows you down. 🦅 Eagle chases you!",
+        "🥇 First to complete the word scores bonus points.",
+        "",
+        "⏳ Press SPACE to start the game...",
+    ]
+
+    waiting = True
+    while waiting:
+        tick = pygame.time.get_ticks() / 500  # for wave animation
+
+        # --- Gradient background like menu ---
+        top_color = (40, 0, 80)
+        mid_color = (128, 0, 128)
+        bottom_color = (30, 144, 255)
+        height = screen.get_height()
+
+        for y in range(height):
+            blend = y / height
+            wave = math.sin(tick + y * 0.01) * 0.1
+            blend += wave
+            blend = max(0, min(blend, 1))
+
+            if blend < 0.5:
+                ratio = blend * 2
+                r = int(top_color[0] * (1 - ratio) + mid_color[0] * ratio)
+                g = int(top_color[1] * (1 - ratio) + mid_color[1] * ratio)
+                b = int(top_color[2] * (1 - ratio) + mid_color[2] * ratio)
+            else:
+                ratio = (blend - 0.5) * 2
+                r = int(mid_color[0] * (1 - ratio) + bottom_color[0] * ratio)
+                g = int(mid_color[1] * (1 - ratio) + bottom_color[1] * ratio)
+                b = int(mid_color[2] * (1 - ratio) + bottom_color[2] * ratio)
+
+            pygame.draw.line(screen, (r, g, b), (0, y), (WIDTH, y))
+
+        # --- Render instructions ---
+        for i, line in enumerate(instructions):
+            font = EMOJI_FONT if "🔥" in line or "💧" in line or "🦅" in line or "🤖" in line else FONT
+            text_surface = font.render(line, True, (255, 255, 255))
+            screen.blit(text_surface, (50, 60 + i * 40))
+
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                waiting = False
+
 def main():
     while True:
         mode = choose_mode()
+        show_instructions(mode)
         snake = [safe_spawn([])]
         ai_snake = [safe_spawn(snake)]
         snake2 = None
@@ -451,8 +487,6 @@ def main():
         eagle_list = [o for o in obstacles if o[2] == 'eagle']
         if eagle_list:
             eagle_pos = [eagle_list[0][0], eagle_list[0][1]]
-
-        show_message("Press SPACE to start")
         
         while True:
             for e in pygame.event.get():
