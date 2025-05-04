@@ -453,15 +453,7 @@ def main():
             eagle_pos = [eagle_list[0][0], eagle_list[0][1]]
 
         show_message("Press SPACE to start")
-        # while True:
-        #     for e in pygame.event.get():
-        #         if e.type == pygame.QUIT:
-        #             return
-        #         if e.type == pygame.KEYDOWN and e.key == pygame.K_SPACE:
-        #             break
-        #     else:
-        #         continue
-        #     break
+        
         while True:
             for e in pygame.event.get():
                 if e.type == pygame.QUIT:
