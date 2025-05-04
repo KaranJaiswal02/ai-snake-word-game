@@ -50,6 +50,8 @@ except:
     WORD_SOUND = pygame.mixer.Sound(buffer=bytearray(44))
 
 FONT = pygame.font.SysFont("consolas", 36)
+INSTR_FONT = pygame.font.SysFont("Courier New", 24)
+
 
 WHITE = (245, 245, 245)
 GREEN = (0, 200, 0)
@@ -242,8 +244,6 @@ def draw_snake(snake, color, direction):
 
 def draw_game(snake, ai_snake, letters, word, player_index, ai_index, p_score, ai_score, obstacles, mode, snake2=None, player2_index=0):
     screen.fill(DARK)
-    #deepseek
-    #it was commented till before for loop forgot why commented so uncommented it
     # for p in particles:
     #     pygame.draw.circle(screen, (80, 80, 80), (int(p['x']), int(p['y'])), p['size'])
     #     p['x'] -= p['speed']
@@ -265,7 +265,7 @@ def draw_game(snake, ai_snake, letters, word, player_index, ai_index, p_score, a
             p['y'] += p['speed_y']
             p['life'] -= 50
         #can remove if we dont like it
-        #   
+          
     # Semi-transparent score panel
     score_panel = pygame.Surface((WIDTH, 80), pygame.SRCALPHA)
     score_panel.fill((30, 30, 30, 180))
@@ -277,11 +277,11 @@ def draw_game(snake, ai_snake, letters, word, player_index, ai_index, p_score, a
     pygame.draw.rect(screen, GREEN, (WIDTH//2 - 150, 50, progress, 10), border_radius=5)
     
     # Score with icons
-    screen.blit(EMOJI_FONT.render("🐍", True, WHITE), (20, 15))
-    screen.blit(FONT.render(f"{p_score}", True, GREEN), (50, 15))
+    #screen.blit(EMOJI_FONT.render( True, WHITE), (20, 15))
+    #screen.blit(FONT.render(f"{p_score}", True, GREEN), (50, 15))
     
-    screen.blit(EMOJI_FONT.render("🤖", True, WHITE), (120, 15))
-    screen.blit(FONT.render(f"{ai_score}", True, BLUE), (150, 15))
+   # screen.blit(EMOJI_FONT.render( True, WHITE), (120, 15))
+    #screen.blit(FONT.render(f"{ai_score}", True, BLUE), (150, 15))
     
     # Word display with background
     word_bg = pygame.Surface((FONT.size(word.upper())[0] + 20, 40), pygame.SRCALPHA)
@@ -299,7 +299,7 @@ def draw_game(snake, ai_snake, letters, word, player_index, ai_index, p_score, a
         pygame.draw.rect(screen, RED, pygame.Rect(x, y, GRID_SIZE, GRID_SIZE), border_radius=3)
         screen.blit(EMOJI_FONT.render(ch, True, WHITE), (x + 2, y + 1))
     
-   # screen.blit(EMOJI_FONT.render("Target Word: " + word.upper(), True, YELLOW), (WIDTH//2 - 100, 10))
+   #screen.blit(EMOJI_FONT.render("Target Word: " + word.upper(), True, YELLOW), (WIDTH//2 - 100, 10))
     
     if mode == "vs_ai_human2":
         screen.blit(EMOJI_FONT.render(f"Player 1: {player_index}/{len(word)}", True, GREEN), (20, 10))
@@ -377,40 +377,48 @@ def show_scorecard(player_score, ai_score, player2_score=None):
                     pygame.quit()
                     sys.exit()
 
+def draw_multiline(text, font, color, x, y, line_spacing=30):
+    for i, line in enumerate(text.splitlines()):
+        msg = font.render(line, True, color)
+        screen.blit(msg, (x, y + i * line_spacing))
+
 def show_instructions(mode):
-    tick_start = pygame.time.get_ticks() / 500  # for animated gradient
-
-    instructions = [
-        "📜 INSTRUCTIONS",
-        "===============",
-        "🧍 Player 1 Controls: Arrow Keys",
-    ]
-    if mode == "vs_ai":
-        instructions += [
-            "🤖 AI competes for the same word.",
-            "🔥 Avoid yourself, the AI, and obstacles.",
-        ]
-    elif mode == "vs_ai_human2":
-        instructions += [
-            "🧍 Player 2 Controls: W A S D",
-            "⚔️ Compete with each other and the AI.",
-            "🔥 Avoid crashing into snakes or obstacles.",
-        ]
-
-    instructions += [
-        "🔤 Collect letters in the correct order.",
-        "🔥 Fire ends your game instantly!",
-        "💧 Water slows you down. 🦅 Eagle chases you!",
-        "🥇 First to complete the word scores bonus points.",
-        "",
-        "⏳ Press SPACE to start the game...",
-    ]
-
     waiting = True
-    while waiting:
-        tick = pygame.time.get_ticks() / 500  # for wave animation
+    INSTR_FONT = pygame.font.SysFont("Courier New", 22, bold=True)
 
-        # --- Gradient background like menu ---
+    # Instruction Text - Plain text using box-drawing style
+    instruction_text = [
+        "╔═════════════ INSTRUCTIONS ═════════════╗",
+        "",
+        "🏁 OBJECTIVE:",
+        "  - Collect letters to form valid English words.",
+        "  - Use arrows (Player1) or WASD (Player2) to move.",
+        "  - Avoid obstacles like water, fire, and eagle.",
+        "",
+        "🔣 CONTROLS:",
+        "  - [↑ ↓ ← →] – Player 1",
+        "  - [W A S D] – Player 2 (if active)",
+        "  - [SPACE] – Start the Game",
+        "  - [ESC] – Quit anytime",
+        "",
+        "🔥 OBSTACLES:",
+        "  - Water ~ Slows you down.",
+        "  - Fire ~ Instant Game Over.",
+        "  - Pit ~ Skips your turn.",
+        "  - Eagle ~ Chases the nearest snake.",
+        "",
+        "🏆 TIPS:",
+        "  - Plan words before collecting letters.",
+        "  - AI is smart — be smarter.",
+        "",
+        "Press SPACE to start...",
+        "╚════════════════════════════════════════╝",
+    ]
+
+    while waiting:
+        tick = pygame.time.get_ticks() / 500
+
+        # Gradient background
         top_color = (40, 0, 80)
         mid_color = (128, 0, 128)
         bottom_color = (30, 144, 255)
@@ -435,14 +443,14 @@ def show_instructions(mode):
 
             pygame.draw.line(screen, (r, g, b), (0, y), (WIDTH, y))
 
-        # --- Render instructions ---
-        for i, line in enumerate(instructions):
-            font = EMOJI_FONT if "🔥" in line or "💧" in line or "🦅" in line or "🤖" in line else FONT
-            text_surface = font.render(line, True, (255, 255, 255))
-            screen.blit(text_surface, (50, 60 + i * 40))
+        # Render all lines
+        for i, line in enumerate(instruction_text):
+            rendered_line = INSTR_FONT.render(line, True, (255, 255, 255))
+            screen.blit(rendered_line, (50, 40 + i * 30))
 
         pygame.display.flip()
 
+        # Handle Events
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
